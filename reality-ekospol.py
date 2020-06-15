@@ -31,12 +31,12 @@ def get_document_from_url(url):
         doc = lxml.html.fromstring(content)
         return doc
 
-def get_pages(document):
-    last_page_link = selLastPage(document)
-    if len(last_page_link) == 0:
-        return 1
-    else:
-        return int(last_page_link[len(last_page_link) - 1].text)
+# def get_pages(document):
+#     last_page_link = selLastPage(document)
+#     if len(last_page_link) == 0:
+#         return 1
+#     else:
+#         return int(last_page_link[len(last_page_link) - 1].text)
 
 def get_projects():
     doc = get_document_from_url('https://www.ekospol.cz/byty/prodej-bytu-praha/')

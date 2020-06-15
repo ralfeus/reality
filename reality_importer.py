@@ -1,9 +1,12 @@
-from math import sin, cos, sqrt, atan2, radians
-import pandas as pd
-import pymongo
-import mysql.connector
 import json
 import urllib.request
+from math import atan2, cos, radians, sin, sqrt
+
+import lxml.html
+import mysql.connector
+import pandas as pd
+import pymongo
+
 
 class BaseImporter:
     stops = None # DataFrame with public transport stops
@@ -46,6 +49,13 @@ class BaseImporter:
             x['coordinates'][1], x['coordinates'][0]
         )).rename('distance')).sort_values(by = 'distance').iloc[0, :].to_json(force_ascii = False)
         return eval(closest_stop)
+
+    def get_document_from_url(self, url):
+        # print(url)
+        with urllib.request.urlopen(url) as request:
+            content = request.read().decode()
+            doc = lxml.html.fromstring(content)
+            return doc
 
     @staticmethod
     def get_json_from_url(url):
