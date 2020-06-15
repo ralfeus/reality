@@ -1,0 +1,31 @@
+#!/usr/bin/fish
+set MYSQL_DB reality
+
+function ec
+    set_color $argv[1]
+    echo $argv[2..-1]
+    set_color normal
+end
+
+# Extract today's entries to 'sreality-today' collection
+ec green "Extract today's entries to 'product-today' collection"
+mongo reality extract-actual-data.js 
+
+ec green Export actual data to MySQL
+mysql $MYSQL_DB -e "DELETE FROM sell_actual"
+mysql $MYSQL_DB -e "DELETE FROM rent_actual"
+mongoexport -d reality -c sell-actual -f _id,latitude,longitude,priceWithVAT,totalFloorArea --type=csv --noHeaderLine | mysql $MYSQL_DB --local-infile=ON -e "LOAD DATA LOCAL INFILE '/dev/stdin' INTO TABLE sell_actual FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (id, lat, lon, price, area)"
+mongoexport -d reality -c rent-actual -f _id,name,latitude,longitude,price --type=csv --noHeaderLine | mysql $MYSQL_DB --local-infile=ON -e "LOAD DATA LOCAL INFILE '/dev/stdin' INTO TABLE rent_actual FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (id, name, lat, lon, price)"
+
+ec green Clean up data
+mysql $MYSQL_DB -e "DELETE FROM sell_actual WHERE price < 100000"
+
+# Compute points and area
+ec green Compute points and area
+mysql $MYSQL_DB -e "UPDATE sell_actual SET point = ST_GeomFromText(CONCAT('POINT(', lon, ' ', lat, ')')), time_added = NOW()"
+mysql $MYSQL_DB -e "UPDATE rent_actual SET point = ST_GeomFromText(CONCAT('POINT(', lon, ' ', lat, ')')), area = REGEXP_SUBSTR(name, \"\\\\d{2,}\"), time_added = NOW()"
+
+# Get districts
+ec green Get districts
+mysql $MYSQL_DB -e "UPDATE sell_actual AS s JOIN prague_regions AS p ON ST_Contains(p.coordinates, s.point) SET district = p.name, s.district_id = p.id"
+mysql $MYSQL_DB -e "UPDATE rent_actual AS s JOIN prague_regions AS p ON ST_Contains(p.coordinates, s.point) SET district = p.name, s.district_id = p.id"
