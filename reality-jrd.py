@@ -18,11 +18,11 @@ class JRD(BaseImporter):
     #selLastPage = CSSSelector('li.pagination-link>a')
     selIdentification = CSSSelector('td:nth-child(1) > p > strong')
     selLayout = CSSSelector('td:nth-child(2) > p')
-    selTotalFloorArea = CSSSelector('td:nth-child(4) > p')
+    selTotalFloorArea = CSSSelector('td[data-toggle] > p')
     selLocation = CSSSelector('div > strong')
     selFloor = CSSSelector('td:nth-child(3) > p')
-    selOrientation = CSSSelector('td:nth-child(6) > p')
-    selPrice = CSSSelector('td:nth-child(10) > p > strong')
+    selOrientation = CSSSelector('td > p')
+    selPrice = CSSSelector('td strong')
     #selURL = CSSSelector('')
 
     urlBase = 'https://www.jrd.cz'
@@ -34,49 +34,59 @@ class JRD(BaseImporter):
         raw_collection = db['jrd']
         print("Connected to DB")
         projects = self.get_projects()
-        idx_project = 1
         for project,url in tqdm(projects.items(), desc='Projects'):
-            #page = 1
-            #pages = 1000
-            #while page <= pages:
             if re.match('https?://', url):
-                json_doc = self.get_atypical_project_items(url)
+                json_docs = self.get_atypical_project_items(url)
+                raw_collection.insert_many(json_docs)
+                for json_doc in json_docs:
+                    self.add_product({
+                        'vendor': "JRD",
+                        'id': json_doc['identification'],
+                        'layout': json_doc['layout'],
+                        'total_floor_area': json_doc['totalFloorArea'],
+                        'price': json_doc['priceWithVAT'],
+                        'latitude': 0,
+                        'longitude': 0,
+                        'type': 1,
+                        'closest_public_transport_stop_name': '',
+                        'closest_public_transport_stop_distance': 0
+                    })
             else:
                 doc = self.get_document_from_url(self.urlBase + url)
                 project_location = self.get_project_location(doc)
                 items = self.selItems(doc) 
                 for item in tqdm(items, desc=project):
+                    layout = self.selLayout(item)[0].text.strip()
                     json_doc = {
                         "url": self.urlBase + item.get('data-href'),
+                        "type": 'land' if layout == 'Pozemek' else 'apartment',
                         "identification": self.selIdentification(item)[0].text.strip(),
-                        "layout": self.selLayout(item)[0].text.strip(),
+                        "layout": layout,
                         "totalFloorArea": self.selTotalFloorArea(item)[0].text.strip(),
                         "location": project_location,
                         "project": project,
-                        "floor": self.selFloor(item)[0].text.strip(),
-                        "orientation": self.selOrientation(item)[0].text.strip(),
-                        "priceWithVAT": int(re.sub(r'\D', '', self.selPrice(item)[0].text)),
+                        "floor": self.selFloor(item)[0].text.strip() if layout != 'Pozemek' else '',
+                        "orientation": next((e.text.strip() 
+                            for e in self.selOrientation(item) 
+                            if e.text and re.match('[A-Z]{1,4}', e.text.strip())), ''),
+                        "priceWithVAT": int(re.sub(r'\D', '', next((e.text 
+                            for e in self.selPrice(item) if re.search('Kč', e.text)), 0))),
                         "timeAdded": datetime.now()
                     }
                     # print(json_doc)
-                raw_collection.insert_one(json_doc)
-                self.add_product({
-                    'vendor': "JRD",
-                    'id': json_doc['identification'],
-                    'layout': json_doc['layout'],
-                    'total_floor_area': json_doc['totalFloorArea'],
-                    'price': json_doc['priceWithVAT'],
-                    'latitude': 0,
-                    'longitude': 0,
-                    'type': 1,
-                    'closest_public_transport_stop_name': '',
-                    'closest_public_transport_stop_distance': 0
-                })
-                #if pages == 1000:
-                #    pages = get_pages(doc)    
-                #print("Got page {} of {}".format(page, pages))
-                #page += 1
-            idx_project += 1
+                    raw_collection.insert_one(json_doc)
+                    self.add_product({
+                        'vendor': "JRD",
+                        'id': json_doc['identification'],
+                        'layout': json_doc['layout'],
+                        'total_floor_area': json_doc['totalFloorArea'],
+                        'price': json_doc['priceWithVAT'],
+                        'latitude': 0,
+                        'longitude': 0,
+                        'type': 1,
+                        'closest_public_transport_stop_name': '',
+                        'closest_public_transport_stop_distance': 0
+                    })
         self.commit()
 
     def get_atypical_project_items(self, url):
