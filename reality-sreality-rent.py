@@ -45,7 +45,7 @@ for entry in items:
         "timeAdded": entry['timeAdded'],
         'dateAdded': entry['dateAdded'],
         "layout": layout[entry['seo']['category_sub_cb']] if entry['seo']['category_sub_cb'] in layout.keys() else 'atypický',
-        "totalFloorArea": re.search('\s+(\d+)\s+', entry['name']).groups()[0],
+        "totalFloorArea": re.search(r'\s+(\d+)\s+', entry['name']).groups()[0],
         "priceWithVAT": entry['price'],
         "latitude": entry['gps']['lat'],
         "longitude": entry['gps']['lon'],

@@ -104,7 +104,7 @@ for entry in tqdm(result, desc="Adding entries to DB"):
             'vendor': 'sreality',
             'id': entry['hash_id'],
             'layout': layout[entry['seo']['category_sub_cb']] if entry['seo']['category_sub_cb'] in layout.keys() else 'atypický',
-            'total_floor_area': re.search('\s+(\d+)\s+', entry['name']).groups()[0],
+            'total_floor_area': re.search(r'\s+(\d+)\s+', entry['name']).groups()[0],
             'price': entry['price'],
             'latitude': entry['gps']['lat'],
             'longitude': entry['gps']['lon'],
