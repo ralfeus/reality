@@ -10,7 +10,6 @@ def get_time_id():
     with urllib.request.urlopen("https://www.central-group.cz/api/system/time-version?timeId=&langId=") as url:
         return url.read().decode()
 
-#mongo_client = pymongo.MongoClient("mongodb+srv://dbuser:PqUSHv9MdYDGYC4Zil62@test-ytcpu.mongodb.net/test?retryWrites=true&w=majority")
 mongo_client = pymongo.MongoClient()
 db = mongo_client['reality']
 collection = db['product']
@@ -36,14 +35,14 @@ while offset < total_products:
     for entry in response:
         entry['timeAdded'] = datetime.now()
         entry['url'] = 'https://www.central-group.cz/byt-detail/{}'.format(entry['catalogNumber'])
-        collection.insert_one({
-            "vendor": "Central Group",
-            "id": entry['catalogNumber'],
-            "timeAdded": entry['timeAdded'],
-            "layout": re.search('\\d\\+kk', entry['layoutLabel']).group(),
-            "totalFloorArea": entry['totalFloorArea'],
-            "priceWithVAT": entry['totalPriceWithVAT']
-        })
+        # collection.insert_one({
+        #     "vendor": "Central Group",
+        #     "id": entry['catalogNumber'],
+        #     "timeAdded": entry['timeAdded'],
+        #     "layout": re.search('\\d\\+kk', entry['layoutLabel']).group(),
+        #     "totalFloorArea": entry['totalFloorArea'],
+        #     "priceWithVAT": entry['totalPriceWithVAT']
+        # })
         BaseImporter.add_product({
             'vendor': "Central Group",
             'id': entry['catalogNumber'],

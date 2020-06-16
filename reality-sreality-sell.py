@@ -39,18 +39,18 @@ for entry in items:
         entry['seo']['locality'],
         entry['hash_id'])
     entry['closestPublicTransportStop'] = BaseImporter.getClosestStop(entry['gps']['lat'], entry['gps']['lon'])
-    collection.insert_one({
-        "vendor": 'sreality',
-        "id": entry['hash_id'],
-        "timeAdded": entry['timeAdded'],
-        'dateAdded': entry['dateAdded'],
-        "layout": layout[entry['seo']['category_sub_cb']] if entry['seo']['category_sub_cb'] in layout.keys() else 'atypický',
-        "totalFloorArea": re.search(r'\s+(\d+)\s+', entry['name']).groups()[0],
-        "priceWithVAT": entry['price'],
-        "latitude": entry['gps']['lat'],
-        "longitude": entry['gps']['lon'],
-        'closestPublicTransportStop': entry['closestPublicTransportStop']
-    })
+    # collection.insert_one({
+    #     "vendor": 'sreality',
+    #     "id": entry['hash_id'],
+    #     "timeAdded": entry['timeAdded'],
+    #     'dateAdded': entry['dateAdded'],
+    #     "layout": layout[entry['seo']['category_sub_cb']] if entry['seo']['category_sub_cb'] in layout.keys() else 'atypický',
+    #     "totalFloorArea": re.search(r'\s+(\d+)\s+', entry['name']).groups()[0],
+    #     "priceWithVAT": entry['price'],
+    #     "latitude": entry['gps']['lat'],
+    #     "longitude": entry['gps']['lon'],
+    #     'closestPublicTransportStop': entry['closestPublicTransportStop']
+    # })
     try:
         raw_collection.insert(entry)
     except pymongo.errors.DuplicateKeyError:
