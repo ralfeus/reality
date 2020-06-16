@@ -37,8 +37,8 @@ class JRD(BaseImporter):
         for project,url in tqdm(projects.items(), desc='Projects'):
             if re.match('https?://', url):
                 json_docs = self.get_atypical_project_items(url)
-                raw_collection.insert_many(json_docs)
                 for json_doc in json_docs:
+                    raw_collection.insert_many(json_doc)
                     self.add_product({
                         'vendor': "JRD",
                         'id': json_doc['identification'],
