@@ -73,12 +73,13 @@ class BaseImporter:
                 unix_socket='/var/run/mysqld/mysqld.sock')
         cursor = BaseImporter.mysql_connection.cursor()
         query = "INSERT INTO `product` " \
-                "(vendor, id, layout, floor_area, price, latitude, longitude, offer_type, " \
+                "(vendor, id, layout, floor_area, price, latitude, longitude, offer_type, url, " \
                 " closest_public_transport_stop_name, closest_public_transport_stop_distance, " \
                 " date_added)" \
                 " VALUES (%(vendor)s, %(id)s, %(layout)s, %(total_floor_area)s, %(price)s, " \
-                "         %(latitude)s, %(longitude)s, %(type)s, " \
-                "         %(closest_public_transport_stop_name)s, %(closest_public_transport_stop_distance)s," \
+                "         %(latitude)s, %(longitude)s, %(type)s, %(url)s, " \
+                "         %(closest_public_transport_stop_name)s, " \
+                "         %(closest_public_transport_stop_distance)s, " \
                 "         DATE(NOW()))"
         try:
             cursor.execute(query, entry)

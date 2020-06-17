@@ -54,6 +54,16 @@ category_main_cb = {
         'commercial': 4,
         'other': 5
 }
+estate_type = {
+    1: 'byt',
+    2: 'dum',
+    3: 'pozemek',
+    4: 'komercni'
+}
+offer_type = {
+    1: 'prodej',
+    2: 'pronajem'
+}
 request_params = {
         'per_page': 999, # Amount of items per page
         'category_main_cb': 1, # Apartments
@@ -89,6 +99,12 @@ for name, category in tqdm(category_main_cb.items(), desc="Categories"):
     for page in tqdm(pages, desc=name, leave=False):
         result += page['_embedded']['estates']
 for entry in tqdm(result, desc="Adding entries to DB"):
+    entry['url'] = 'https://www.sreality.cz/detail/{}/{}/{}/{}/{}'.format(
+        offer_type[entry['seo']['category_type_cb']],
+        estate_type[entry['seo']['category_main_cb']],
+        layout[entry['seo']['category_sub_cb']] if entry['seo']['category_sub_cb'] in layout.keys() else 'atypický',
+        entry['seo']['locality'],
+        entry['hash_id'])
     entry['timeAdded'] = datetime.now()
     entry['dateAdded'] = datetime.combine(
             datetime.now().date(), 
@@ -110,7 +126,8 @@ for entry in tqdm(result, desc="Adding entries to DB"):
             'longitude': entry['gps']['lon'],
             'type': entry['seo']['category_type_cb'],
             'closest_public_transport_stop_name': closestStop['name'],
-            'closest_public_transport_stop_distance': closestStop['distance']
+            'closest_public_transport_stop_distance': closestStop['distance'], 
+            'url': entry['url']
         }
         BaseImporter.add_product(product)
 #         if entry['hash_id'] == '1004068444':

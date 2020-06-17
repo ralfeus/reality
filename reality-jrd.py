@@ -49,7 +49,8 @@ class JRD(BaseImporter):
                         'longitude': 0,
                         'type': 1,
                         'closest_public_transport_stop_name': '',
-                        'closest_public_transport_stop_distance': 0
+                        'closest_public_transport_stop_distance': 0, 
+                        'url': json_doc['url']
                     })
             else:
                 doc = self.get_document_from_url(self.urlBase + url)
@@ -85,7 +86,8 @@ class JRD(BaseImporter):
                         'longitude': 0,
                         'type': 1,
                         'closest_public_transport_stop_name': '',
-                        'closest_public_transport_stop_distance': 0
+                        'closest_public_transport_stop_distance': 0, 
+                        'url': json_doc['url']
                     })
         self.commit()
 

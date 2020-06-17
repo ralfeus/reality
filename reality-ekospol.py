@@ -92,7 +92,8 @@ for project,url in tqdm(projects.items(), desc='Projects'):
             'longitude': 0,
             'type': 1,
             'closest_public_transport_stop_name': '',
-            'closest_public_transport_stop_distance': 0
+            'closest_public_transport_stop_distance': 0, 
+            'url': json_doc['url']
         })
         #if pages == 1000:
         #    pages = get_pages(doc)    

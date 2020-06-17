@@ -53,7 +53,8 @@ while offset < total_products:
             'longitude': 0,
             'type': 1,
             'closest_public_transport_stop_name': '',
-            'closest_public_transport_stop_distance': 0
+            'closest_public_transport_stop_distance': 0, 
+            'url': entry['url']
         })
     raw_collection.insert_many(response)
 BaseImporter.commit()
