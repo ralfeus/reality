@@ -33,14 +33,19 @@ print(f'Got data. df.shape is {df.shape}')
 df.labelsAll = df.labelsAll.aggregate(flatten)
 df['layout'] = df.name.str.extract(r'(\d\+\S+)')
 df['area'] = df.name.str.extract(r'(\d+)\sm').astype(int)
-df['locality'] = df['locality'].str.split('-').apply(lambda x: x[1])
+# df['locality'] = df['locality'].str.split('-').apply(lambda x: x[1])
 df = df.drop(columns = ['_id', 'name'])
-df = df.join(pd.get_dummies(df.labelsAll.apply(pd.Series).stack()).sum(level = 0))
-#df = df.join(pd.get_dummies(df.layout, prefix = 'layout'))
+# df = df.join(pd.get_dummies(df.labelsAll.apply(pd.Series).stack()).sum(level = 0))
+df = df.join(pd.get_dummies(df.layout, prefix = 'layout'))
 df = df.join(pd.get_dummies(df.locality, prefix = 'locality'))
 df['price_per_sq_meter'] = df.price / df.area
-df = df.drop(columns = ['price', 'area', 'layout', 'locality', 'labelsAll'])
+df = df.drop(columns = ['price', 'layout', 'locality', 'labelsAll'])
+
+### Cleansing data 
+df = df[df['area'] > 0]
 df = df[df.price_per_sq_meter >= 250]
+### end of cleansing
+
 df = df.sort_values(by = ['price_per_sq_meter'])
 
 from matplotlib import pyplot as plt

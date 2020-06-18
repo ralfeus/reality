@@ -101,12 +101,15 @@ for name, category in tqdm(category_main_cb.items(), desc="Categories"):
     for page in tqdm(pages, desc=name, leave=False):
         result += page['_embedded']['estates']
 for entry in tqdm(result, desc="Adding entries to DB"):
+    totalFloorAreaMatch = re.search(r'\s+([\d\s]+)\s+m²', entry['name'])
     entry['url'] = 'https://www.sreality.cz/detail/{}/{}/{}/{}/{}'.format(
         offer_type[entry['seo']['category_type_cb']],
         estate_type[entry['seo']['category_main_cb']],
         layout[entry['seo']['category_sub_cb']] if entry['seo']['category_sub_cb'] in layout.keys() else 'atypický',
         entry['seo']['locality'],
         entry['hash_id'])
+    entry['totalFloorArea'] = re.sub(r'\s', '', 
+        totalFloorAreaMatch[1]) if totalFloorAreaMatch is not None else 0
     entry['timeAdded'] = datetime.now()
     entry['dateAdded'] = datetime.combine(
             datetime.now().date(), 
@@ -123,7 +126,7 @@ for entry in tqdm(result, desc="Adding entries to DB"):
             'vendor': 'sreality',
             'id': entry['hash_id'],
             'layout': layout[entry['seo']['category_sub_cb']] if entry['seo']['category_sub_cb'] in layout.keys() else 'atypický',
-            'total_floor_area': re.search(r'\s+(\d+)\s+', entry['name']).groups()[0],
+            'total_floor_area': entry['totalFloorArea'],
             'price': entry['price'],
             'latitude': entry['gps']['lat'],
             'longitude': entry['gps']['lon'],
