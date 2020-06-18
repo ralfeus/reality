@@ -47,7 +47,8 @@ for entry in tqdm(response):
                 "priceWithVAT": entry['advertEstateOffer'][0]['price'],
                 "latitude": lat,
                 "longitude": lon,
-                'closestPublicTransportStop': entry['closestPublicTransportStop']
+                'closestPublicTransportStop': entry['closestPublicTransportStop'],
+                'url': entry['url']
             }
         BaseImporter.add_product({
             'vendor': product_entry['vendor'],
@@ -59,7 +60,8 @@ for entry in tqdm(response):
             'longitude': product_entry['longitude'],
             'type': offer_type.get(offer['keyOfferType']),
             'closest_public_transport_stop_name': product_entry['closestPublicTransportStop']['name'],
-            'closest_public_transport_stop_distance': product_entry['closestPublicTransportStop']['distance']
+            'closest_public_transport_stop_distance': product_entry['closestPublicTransportStop']['distance'],
+            'url': product_entry['url']
         })
 
 #         if offer['keyOfferType'] == 'prodej':

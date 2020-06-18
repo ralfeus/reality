@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 import pandas as pd
 from datetime import datetime
+from datetime import time
 
 def flatten(x):
     accu = []
@@ -11,11 +12,11 @@ def flatten(x):
 
 client = MongoClient('sandlet')
 db = client.reality
-coll = db['sreality-rent']
+coll = db['sreality_rent']
 
 dataset = coll.aggregate([
     {'$match': {
-        'timeAdded': {'$gt': datetime.strptime('2020-03-17', '%Y-%m-%d')}
+        'timeAdded': {'$gt': datetime.combine(datetime.now().date(), time(0, 0, 0))}
     }},
     {'$group': {
         '_id': "$hash_id",
@@ -28,9 +29,10 @@ dataset = coll.aggregate([
 ])
 df_original = pd.DataFrame(dataset)
 df = df_original
+print(f'Got data. df.shape is {df.shape}')
 df.labelsAll = df.labelsAll.aggregate(flatten)
-df['layout'] = df.name.str.extract('(\d\+\S+)')
-df['area'] = df.name.str.extract('(\d+)\sm').astype(int)
+df['layout'] = df.name.str.extract(r'(\d\+\S+)')
+df['area'] = df.name.str.extract(r'(\d+)\sm').astype(int)
 df['locality'] = df['locality'].str.split('-').apply(lambda x: x[1])
 df = df.drop(columns = ['_id', 'name'])
 df = df.join(pd.get_dummies(df.labelsAll.apply(pd.Series).stack()).sum(level = 0))

@@ -58,11 +58,13 @@ estate_type = {
     1: 'byt',
     2: 'dum',
     3: 'pozemek',
-    4: 'komercni'
+    4: 'komercni',
+    5: 'jine'
 }
 offer_type = {
     1: 'prodej',
-    2: 'pronajem'
+    2: 'pronajem',
+    3: 'drazba'
 }
 request_params = {
         'per_page': 999, # Amount of items per page
@@ -116,6 +118,7 @@ for entry in tqdm(result, desc="Adding entries to DB"):
     if (entry['seo']['locality'].startswith('praha') and 
         entry['seo']['category_main_cb'] == 1):
         closestStop = BaseImporter.getClosestStop(entry['gps']['lat'], entry['gps']['lon'] )
+        entry['closestPublicTransportStop'] = closestStop
         product = {
             'vendor': 'sreality',
             'id': entry['hash_id'],
