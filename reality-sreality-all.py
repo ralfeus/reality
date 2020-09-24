@@ -39,7 +39,7 @@ def get_items(endpoint, request_params, cat_name=None):
     return result
 
 def predict_rent_price(items):
-    items = [{
+    items_to_predict = [{
         'labelsAll': x['labelsAll'],
         'price': x['price'],
         'name': x['name'],
@@ -47,10 +47,18 @@ def predict_rent_price(items):
         'totalFloorArea': x['totalFloorArea'],
         'public_transport_distance': x['closestPublicTransportStop']['distance'],
         'layout': x['seo']['category_sub_cb']
-    } for x in items]
-    result = predict(items)
-    for index in range(len(items)):
-        items[index].update({'predicted_rent_price': items[index]['totalFloorArea'] * result[index]})
+    } for x in items
+    if 
+        x['seo']['category_main_cb'] == 1 and 
+        x['seo']['category_type_cb'] == 1 and
+        x['seo']['locality'].startswith('praha-')]
+    result = predict(items_to_predict)
+    for index in range(len(items_to_predict)):
+        items_to_predict[index].update(
+            {'predicted_rent_price': items_to_predict[index]['totalFloorArea'] * result[index]})
+    #items_to_predict.sort(key=lambda x: int(x['hash_id']))
+    #items.sort(key=lambda x: int(x['hash_id']))
+
     return items
 
 #mongo_client = pymongo.MongoClient("mongodb+srv://dbuser:PqUSHv9MdYDGYC4Zil62@test-ytcpu.mongodb.net/reality?retryWrites=true&w=majority")
@@ -145,14 +153,9 @@ for entry in tqdm(result, desc="Adding entries to DB"):
             'closest_public_transport_stop_distance': closestStop['distance'], 
             'url': entry['url']
         }
-         BaseImporter.add_product(product)
+        BaseImporter.add_product(product)
 
-result = predict_rent_price([
-    apartment for apartment in result 
-    if 
-        apartment['seo']['category_main_cb'] == 1 and 
-        apartment['seo']['category_type_cb'] == 1 and
-        apartment['seo']['locality'].startswith('praha-')])
+result = predict_rent_price(result )
 estates_collection.insert_many(result)
 
 items = get_json_from_url(f'{projectUrl}/count')['result_size']
