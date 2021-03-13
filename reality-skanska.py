@@ -21,6 +21,8 @@ selLocation = CSSSelector('div.entry-subheader>p')
 selFloor = CSSSelector('div.meta-floor>div.meta-value')
 selOrientation = CSSSelector('div[class="entry-meta meta"]>div.meta-value')
 selPrice = CSSSelector('div.meta-price>div.meta-value')
+selPages1 = CSSSelector('span.has-badge')
+selPages2 = CSSSelector('span.badge')
 selURL = CSSSelector('a.entry-link')
 
 def get_document_from_url(url, headers=None):
@@ -31,8 +33,13 @@ def get_document_from_url(url, headers=None):
         return doc
 
 def get_pages(url):
-    with requests.get(url, headers={'X-Requested-With': 'XMLHttpRequest'}) as response:
-        items = response.json()['apartments_count']
+    with requests.get(url) as response:
+        doc = lxml.html.fromstring(response.text)
+        badge_items = selPages1(doc)
+        for badge in badge_items:
+            if badge.text == 'Byty':
+                break
+        items = int(selPages2(badge)[0].text)
         entries_per_page = 12
         pages = math.ceil(items / entries_per_page)
         return pages
@@ -45,8 +52,8 @@ collection = db['product']
 raw_collection = db['skanska']
 print("Connected to DB")
 page = 1
-pages = 1000
 skanska_url = 'https://reality.skanska.cz/byty'
+pages = get_pages(skanska_url)    
 while page <= pages:
     doc = get_document_from_url(f'{skanska_url}?p1000={page}')
     items = selItems(doc) 
@@ -86,8 +93,6 @@ while page <= pages:
             'closest_public_transport_stop_distance': 0, 
             'url': json_doc['url']
         })
-    if pages == 1000:
-        pages = get_pages(skanska_url)    
     print("Got page {} of {}".format(page, pages))
     page += 1
 BaseImporter.commit()
