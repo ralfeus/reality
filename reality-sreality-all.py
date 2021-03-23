@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 from reality_importer import BaseImporter
 from reality_prepare_rent_dataset import predict, prepareDataset
-from datetime import datetime
-from datetime import time
+from datetime import datetime, time
+from http.client import IncompleteRead
+from time import sleep
 import json
 import math
 import pymongo
@@ -10,9 +11,20 @@ import re
 from tqdm import tqdm
 import urllib.request
 
+ATTEMPTS = 5
+
 def get_json_from_url(url):
-    with urllib.request.urlopen(url) as urlObject:
-        return json.loads(urlObject.read().decode())
+    attempts_left = ATTEMPTS
+    while True:
+        try:
+            with urllib.request.urlopen(url) as urlObject:
+                return json.loads(urlObject.read().decode())
+        except IncompleteRead:
+            attempts_left -= 1
+            if not attempts_left:
+                raise Exception(f"Couldn't get document from the URL {url}")
+            else:
+                print(f"An error has occurred during getting URL {url}. Retrying...")
     
 def get_items(endpoint, request_params, cat_name=None):
     """
@@ -60,12 +72,17 @@ def predict_rent_price(items):
     #items.sort(key=lambda x: int(x['hash_id']))
 
     return items
+    
+def is_valid(entry):
+    if entry['price'] > 1000000000:
+        return False
+    return True
 
 #mongo_client = pymongo.MongoClient("mongodb+srv://dbuser:PqUSHv9MdYDGYC4Zil62@test-ytcpu.mongodb.net/reality?retryWrites=true&w=majority")
 mongo_client = pymongo.MongoClient()
 
 db = mongo_client['reality']
-collection = db['product']
+#collection = db['product']
 estates_collection = db['sreality_all']
 projects_collection = db['sreality_projects']
 response = {}
@@ -122,7 +139,10 @@ for name, category in tqdm(category_main_cb.items(), desc="Categories", leave=Fa
     })
     for page in tqdm(pages, desc=name, leave=False):
         result += page['_embedded']['estates']
-for entry in tqdm(result, desc="Adding entries to DB"):
+for entry in tqdm(result, desc="Adding entries to MySQL DB"):
+    if not is_valid(entry):
+        result.remove(entry)
+        continue
     totalFloorAreaMatch = re.search(r'\s+([\d\s]+)\s+m²', entry['name'])
     entry['url'] = 'https://www.sreality.cz/detail/{}/{}/{}/{}/{}'.format(
         offer_type[entry['seo']['category_type_cb']],
@@ -149,14 +169,17 @@ for entry in tqdm(result, desc="Adding entries to DB"):
             'latitude': entry['gps']['lat'],
             'longitude': entry['gps']['lon'],
             'type': entry['seo']['category_type_cb'],
-            'closest_public_transport_stop_name': closestStop['name'],
-            'closest_public_transport_stop_distance': closestStop['distance'], 
+            'closest_public_transport_stop_name': closestStop['name'] if closestStop else None,
+            'closest_public_transport_stop_distance': closestStop['distance'] if closestStop else None, 
             'url': entry['url']
         }
         BaseImporter.add_product(product)
+BaseImporter.commit()
 
-result = predict_rent_price(result )
+# TODO: Has to be fixed
+# result = predict_rent_price(result )
 estates_collection.insert_many(result)
+print("SReality all: Done adding estates")
 
 items = get_json_from_url(f'{projectUrl}/count')['result_size']
 print(f'Found {items} projects')
@@ -166,43 +189,58 @@ result = get_items(projectUrl, request_params={
 for projects in result:
     for project in tqdm(projects['projects'], desc="Projects", leave=False):
         project_url = f'{api_url}{project["_links"]["self"]["href"]}'
-        project_doc = get_json_from_url(project_url)
-#         print('\tGetting {} objects from the project "{}"'.format(
-#             project_doc["_embedded"]["estates"]["result_size"],
-#             project['name']
-#         ))
-        for entry in tqdm(project_doc['_embedded']['estates']['_embedded']['estates'], desc=project['name'], leave=False):  
-            entry['url'] = 'https://www.sreality.cz/detail/{}/{}/{}/{}/{}'.format(
-                offer_type[entry['seo']['category_type_cb']],
-                estate_type[entry['seo']['category_main_cb']],
-                layout[entry['seo']['category_sub_cb']] if entry['seo']['category_sub_cb'] in layout.keys() else 'atypický',
-                entry['seo']['locality'],
-                entry['hash_id'])
-            entry['projectId'] = project['id']
-            entry['totalFloorArea'] = int(entry['usable_area'])
-            entry['timeAdded'] = datetime.now()
-            entry['dateAdded'] = datetime.combine(
-                    datetime.now().date(), 
-                    time(0, 0, 0))   
-            estates_collection.insert(entry)
-            if (BaseImporter.prague_boundaries['south'] <= entry['gps']['lat'] <= BaseImporter.prague_boundaries['north'] and
-                BaseImporter.prague_boundaries['west'] <= entry['gps']['lon'] <= BaseImporter.prague_boundaries['east'] and
-                entry['seo']['category_main_cb'] == 1):
-                closestStop = BaseImporter.getClosestStop(entry['gps']['lat'], entry['gps']['lon'] )
+        job_done = False
+        attempts_left = 3
+        while not job_done and attempts_left:
+            try:
+                project_doc = get_json_from_url(project_url)
+    #         print('\tGetting {} objects from the project "{}"'.format(
+    #             project_doc["_embedded"]["estates"]["result_size"],
+    #             project['name']
+    #         ))
+                for entry in tqdm(project_doc['_embedded']['estates']['_embedded']['estates'], desc=project['name'], leave=False):
+                    entry['url'] = 'https://www.sreality.cz/detail/{}/{}/{}/{}/{}'.format(
+                        offer_type[entry['seo']['category_type_cb']],
+                        estate_type[entry['seo']['category_main_cb']],
+                        layout[entry['seo']['category_sub_cb']] if entry['seo']['category_sub_cb'] in layout.keys() else 'atypický',
+                        entry['seo']['locality'],
+                        entry['hash_id'])
+                    entry['projectId'] = project['id']
+                    entry['totalFloorArea'] = int(entry['usable_area'])
+                    entry['timeAdded'] = datetime.now()
+                    entry['dateAdded'] = datetime.combine(
+                            datetime.now().date(), 
+                            time(0, 0, 0))   
+                    estates_collection.insert_one(entry)
+                    if (BaseImporter.prague_boundaries['south'] <= entry['gps']['lat'] <= BaseImporter.prague_boundaries['north'] and
+                        BaseImporter.prague_boundaries['west'] <= entry['gps']['lon'] <= BaseImporter.prague_boundaries['east'] and
+                        entry['seo']['category_main_cb'] == 1):
+                        closestStop = BaseImporter.getClosestStop(entry['gps']['lat'], entry['gps']['lon'] )
 
-                product = {
-                    'vendor': 'sreality',
-                    'id': str(entry['hash_id']),
-                    'layout': layout[entry['seo']['category_sub_cb']] if entry['seo']['category_sub_cb'] in layout.keys() else 'atypický',
-                    'total_floor_area': entry['totalFloorArea'],
-                    'price': entry['price'],
-                    'latitude': entry['gps']['lat'],
-                    'longitude': entry['gps']['lon'],
-                    'type': entry['seo']['category_type_cb'],
-                    'closest_public_transport_stop_name': closestStop['name'],
-                    'closest_public_transport_stop_distance': closestStop['distance'], 
-                    'url': entry['url']
-                }
-                BaseImporter.add_product(product)
-        projects_collection.insert(project)
+                        product = {
+                            'vendor': 'sreality',
+                            'id': str(entry['hash_id']),
+                            'layout': layout[entry['seo']['category_sub_cb']] if entry['seo']['category_sub_cb'] in layout.keys() else 'atypický',
+                            'total_floor_area': entry['totalFloorArea'],
+                            'price': entry['price'],
+                            'latitude': entry['gps']['lat'],
+                            'longitude': entry['gps']['lon'],
+                            'type': entry['seo']['category_type_cb'],
+                            'closest_public_transport_stop_name': closestStop['name'],
+                            'closest_public_transport_stop_distance': closestStop['distance'], 
+                            'url': entry['url']
+                        }
+                        BaseImporter.add_product(product)
+                job_done = True    
+            except urllib.error.HTTPError as ex:
+                print("Some shit has happened: %s" % str(ex))
+                print("But I'll try again")
+                attempts_left -= 1
+                sleep(5)
+
+        projects_collection.insert_one(project)
+print("SReality all: Done adding projects")
+print("Committing transaction...")
 BaseImporter.commit()
+print("Done!")
+
