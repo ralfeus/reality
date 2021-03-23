@@ -53,7 +53,7 @@ class JRD(BaseImporter):
                         'url': json_doc['url']
                     })
             else:
-                doc = self.get_document_from_url(self.urlBase + url)
+                doc = self.get_document_from_url(f"https:{url}")
                 project_location = self.get_project_location(doc)
                 items = self.selItems(doc) 
                 for item in tqdm(items, desc=project):

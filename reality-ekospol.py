@@ -34,20 +34,12 @@ def get_document_from_url(url):
         doc = lxml.html.fromstring(content)
         return doc
 
-# def get_pages(document):
-#     last_page_link = selLastPage(document)
-#     if len(last_page_link) == 0:
-#         return 1
-#     else:
-#         return int(last_page_link[len(last_page_link) - 1].text)
-
 def get_projects():
     doc = get_document_from_url('https://www.ekospol.cz/byty/prodej-bytu-praha/')
     projects = selProjects(doc)
     mapped_projects = dict(map(lambda p: (p.cssselect('h2')[0].text, p.get('href')), projects))
     return mapped_projects
 
-#mongo_client = pymongo.MongoClient("mongodb+srv://dbuser:PqUSHv9MdYDGYC4Zil62@test-ytcpu.mongodb.net/test?retryWrites=true&w=majority")
 mongo_client = pymongo.MongoClient()
 
 db = mongo_client['reality']
@@ -78,14 +70,6 @@ for project,url in tqdm(projects.items(), desc='Projects'):
                 "timeAdded": datetime.now()
             }
             raw_collection.insert_one(json_doc)
-    #         collection.insert_one({
-    #             "vendor": "Ekospol",
-    #             "id": json_doc['identification'],
-    #             "timeAdded": json_doc['timeAdded'],
-    #             "layout": json_doc['layout'],
-    #             "totalFloorArea": json_doc['totalFloorArea'],
-    #             "priceWithVAT": json_doc['priceWithVAT']
-    #         })
             BaseImporter.add_product({
                 'vendor': "Ekospol",
                 'id': json_doc['identification'],
