@@ -8,7 +8,7 @@ import re
 import urllib.request
 import lxml.html
 from lxml.cssselect import CSSSelector
-# from tqdm import tqdm
+from tqdm import tqdm
 
 selItems = CSSSelector('div.item-tiles.mt-5>div.grid>div.g-12.m-6')
 selLastPage = CSSSelector('.pagination li:last-child a')
@@ -21,6 +21,7 @@ selProject = CSSSelector('div.tile div.grid div.g-9.m-12.s-12.xs-12 div.grid div
 selFloor = CSSSelector('div.tile div.grid div.g-9.m-12.s-12.xs-12 div.grid div.g-6.m-12.s-12.xs-12 div.grid div.g-3')
 selOrientation = CSSSelector('div.tile div.grid div.g-9.m-12.s-12.xs-12 div.grid div.g-6.m-12.s-12.xs-12 div.grid div.g-3 div.m-a-r.s-a-r.xs-a-r')
 selPrice = CSSSelector('div.price-info div.grid div.g-6.m-10.s-10.xs-10 div.grid div.g-12.m-6.s-4.xs-6.m-inverse.s-inverse.xs-inverse div.a-r strong')
+selProjects = CSSSelector('p.chapter')
 selUrl = CSSSelector('a.tile-link')
 
 def get_document_from_url(url):
@@ -31,11 +32,21 @@ def get_document_from_url(url):
 
 def get_pages(document):
     txtNextPage = '»'
-    last_pagination = selLastPage(document)[0].text
-    if last_pagination == txtNextPage:
-        return int(selLastButOnePage(document)[0].text)
-    else:
-        return int(last_pagination)
+    try:
+        last_pagination = selLastPage(document)[0].text
+        if last_pagination == txtNextPage:
+            return int(selLastButOnePage(document)[0].text)
+        else:
+            return int(last_pagination)
+    except:
+        return 1
+       
+def get_projects():
+    doc = get_document_from_url('https://www.finep.cz/cs')
+    projects = selProjects(doc)
+    mapped_projects = [{'name': p.getnext().text, 'url': p.getparent().getnext().cssselect('a.btn')[0].attrib['href']}
+                       for p in projects]
+    return mapped_projects
 
 #mongo_client = pymongo.MongoClient("mongodb+srv://dbuser:PqUSHv9MdYDGYC4Zil62@test-ytcpu.mongodb.net/test?retryWrites=true&w=majority")
 mongo_client = pymongo.MongoClient()
@@ -43,12 +54,16 @@ db = mongo_client['reality']
 collection = db['product']
 raw_collection = db['finep']
 print("Connected to DB")
-page = 1
-pages = 1000
-while page <= pages:
-    doc = get_document_from_url('https://www.finep.cz/cs/vyhledavani?page={}'.format(page))
+try:
+    projects = get_projects()
+except:
+    logging.exception("Couldn't get projects")
+    exit(1)
+    
+for project in tqdm(projects, desc='Projects'):
+    doc = get_document_from_url(project['url'])
     items = selItems(doc) 
-    for item in items:
+    for item in tqdm(items, desc=project['name']):
         json_doc = {
             "identification": selIdentification(item)[0].text,
             "layout": selLayout(item)[0].text,
@@ -83,8 +98,8 @@ while page <= pages:
             'closest_public_transport_stop_distance': 0, 
             'url': json_doc['url']
         })
-    if pages == 1000:
-        pages = get_pages(doc)    
-    print("Got page {} of {}".format(page, pages))
-    page += 1
+#    if pages == 1000:
+#        pages = get_pages(doc)    
+#    print("Got page {} of {}".format(page, pages))
+#    page += 1
 BaseImporter.commit()

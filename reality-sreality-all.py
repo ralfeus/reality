@@ -3,6 +3,7 @@ from reality_importer import BaseImporter
 from reality_prepare_rent_dataset import predict, prepareDataset
 from datetime import datetime, time
 from http.client import IncompleteRead
+import logging
 from time import sleep
 import json
 import math
@@ -19,12 +20,15 @@ def get_json_from_url(url):
         try:
             with urllib.request.urlopen(url) as urlObject:
                 return json.loads(urlObject.read().decode())
-        except IncompleteRead:
+        except:
+            logging.exception("Unexpected error. Trying again")
             attempts_left -= 1
             if not attempts_left:
+                logging.fatal("No retries left")
                 raise Exception(f"Couldn't get document from the URL {url}")
             else:
                 print(f"An error has occurred during getting URL {url}. Retrying...")
+                sleep(30)
     
 def get_items(endpoint, request_params, cat_name=None):
     """

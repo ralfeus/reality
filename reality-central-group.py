@@ -2,6 +2,7 @@
 from reality_importer import BaseImporter 
 from datetime import datetime
 import json
+import logging
 import pymongo
 import re
 import urllib.request
@@ -18,10 +19,14 @@ total_products = 0
 response = {}
 print("Connected to DB")
 time_id = get_time_id()
-with urllib.request.urlopen('https://www.central-group.cz/api/apartment/search/stats?timeId={}&langId=1&sort=1&search=true'.format(time_id)) as url:
-    response = json.loads(url.read().decode())
-    print(response)
-    total_products = response['totalCount']
+try:
+    with urllib.request.urlopen('https://www.central-group.cz/api/apartment/search/stats?timeId={}&langId=1&sort=1&search=true'.format(time_id)) as url:
+        response = json.loads(url.read().decode())
+        print(response)
+        total_products = response['totalCount']
+except:
+    logging.exception("Couldn't get apartments list")
+    exit(1)
 
 print("Got ", total_products, "products from Central Group")
 offset = 0

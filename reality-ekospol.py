@@ -46,7 +46,11 @@ db = mongo_client['reality']
 collection = db['product']
 raw_collection = db['ekospol']
 print("Connected to DB")
-projects = get_projects()
+try:
+    projects = get_projects()
+except:
+    logging.exception("Couldn't get projects")
+    exit(1)
 idx_project = 1
 for project,url in tqdm(projects.items(), desc='Projects'):
     print("Project '{}' ({} of {})".format(project, idx_project, len(projects)))
@@ -89,5 +93,9 @@ for project,url in tqdm(projects.items(), desc='Projects'):
         #    pages = get_pages(doc)    
         #print("Got page {} of {}".format(page, pages))
         #page += 1
+    except Exception as ex:
+        print("Some error has occurred:")
+        print(str(ex))
+        print("Will continue")
     idx_project += 1
 BaseImporter.commit()

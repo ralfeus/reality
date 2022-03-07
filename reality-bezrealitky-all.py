@@ -3,6 +3,7 @@ from reality_importer import BaseImporter
 from datetime import datetime
 import json
 import pymongo
+from time import sleep
 import urllib.request
 from tqdm import tqdm 
 
@@ -25,7 +26,17 @@ offer_type = {
 }
 print("Connected to DB")
 #with urllib.request.urlopen('https://www.bezrealitky.cz/api/record/markers?offerType=prodej&estateType=byt&boundary=[[{"lat":50.18,"lng":14.22},{"lat":50.18,"lng":14.71},{"lat":49.97,"lng":14.71},{"lat":49.97,"lng":14.22},{"lat":50.18,"lng":14.22}]]') as url:
-response = BaseImporter.get_json_from_url('https://www.bezrealitky.cz/api/record/markers')
+print("Trying to get entries...")
+for attempt in range(5):
+    try:
+        response = BaseImporter.get_json_from_url('https://www.bezrealitky.cz/api/record/markers')
+        break
+    except Exception as ex:
+        print("An error has occurred")
+        print(str(ex))
+        if attempt == 4:
+            exit()
+        sleep(30)
 print("Inserting {} entries...".format(len(response)), end = '')
 sell = rent = 0
 for entry in tqdm(response):

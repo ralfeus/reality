@@ -3,6 +3,7 @@ from reality_importer import BaseImporter
 
 from datetime import datetime
 import json
+import logging
 import pymongo
 import re
 import urllib.request
@@ -18,7 +19,7 @@ class JRD(BaseImporter):
     #selLastPage = CSSSelector('li.pagination-link>a')
     selIdentification = CSSSelector('td:nth-child(1) > p > strong')
     selLayout = CSSSelector('td:nth-child(2) > p')
-    selTotalFloorArea = CSSSelector('td[data-toggle] > p')
+    selTotalFloorArea = CSSSelector('td:nth-child(4) > p')
     selLocation = CSSSelector('div > strong')
     selFloor = CSSSelector('td:nth-child(3) > p')
     selOrientation = CSSSelector('td > p')
@@ -33,10 +34,15 @@ class JRD(BaseImporter):
         db = mongo_client['reality']
         raw_collection = db['jrd']
         print("Connected to DB")
-        projects = self.get_projects()
+        try:
+            projects = self.get_projects()
+        except:
+            logging.exception("Couldn't get projects")
+            exit(1)
         for project,url in tqdm(projects.items(), desc='Projects'):
             if re.match('https?://', url):
                 json_docs = self.get_atypical_project_items(url)
+                #print(f"\tGot {len(json_docs)} items")
                 for json_doc in json_docs:
                     raw_collection.insert_many(json_doc)
                     self.add_product({
@@ -56,6 +62,7 @@ class JRD(BaseImporter):
                 doc = self.get_document_from_url(f"https:{url}")
                 project_location = self.get_project_location(doc)
                 items = self.selItems(doc) 
+                #print(f"\tGot {len(items)} items")
                 for item in tqdm(items, desc=project):
                     layout = self.selLayout(item)[0].text.strip()
                     json_doc = {
