@@ -5,7 +5,7 @@ from math import atan2, cos, radians, sin, sqrt
 
 from inspect import getframeinfo, getouterframes, currentframe
 import lxml.html
-import mysql.connector
+import MySQLdb
 import pandas as pd
 import pymongo
 
@@ -84,13 +84,13 @@ class BaseImporter:
                         "         DATE(NOW()))"
                 cursor.execute(query, entry)
                 return True
-            except mysql.connector.errors.DataError as ex:
+            except MySQLdb._exceptions.DataError as ex:
                 print(str(ex))
                 print(entry)
-            except mysql.connector.errors.IntegrityError:
+            except MySQLdb._exceptions.IntegrityError:
     #             print(entry)
                 return False
-            except mysql.connector.errors.OperationalError as ex:
+            except MySQLdb._exceptions.OperationalError as ex:
                 print(str(ex))
                 attempts_left -= 1
                 if not attempts_left:
@@ -106,12 +106,12 @@ class BaseImporter:
             if not attempts_left:
                 raise Exception("Couldn't connect to MySQL")
             attempts_left -= 1
-            BaseImporter.mysql_connection = mysql.connector.connect(
+            BaseImporter.mysql_connection = MySQLdb.connect(
                 host='localhost', 
                 user='reality',
                 password='reality',
                 database='reality'
-                #auth_plugin='auth_socket', 
+                #auth_plugin='mysql_native_password' 
                 #unix_socket='/var/run/mysqld/mysqld.sock'
             )
     
