@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+import logging
 import urllib.request
 from math import atan2, cos, radians, sin, sqrt
 
@@ -8,8 +9,12 @@ import lxml.html
 import MySQLdb
 import pandas as pd
 import pymongo
+from time import sleep
 
 ATTEMPTS = 5
+logging.basicConfig(level=logging.INFO)
+mongo_client = pymongo.MongoClient(connect=True)
+mongo_db = mongo_client['reality']
 
 class BaseImporter:
     stops = None # DataFrame with public transport stops
@@ -20,6 +25,10 @@ class BaseImporter:
         'west': 14.22,
         'east': 14.71
     }
+    _logger:logging.Logger = None
+
+    def __init__(self):
+        self._logger = logging.getLogger(type(self).__name__)
 
     @staticmethod
     def __get_distance(lat1, lon1, lat2, lon2):
@@ -42,9 +51,8 @@ class BaseImporter:
     @staticmethod
     def getClosestStop(lat, lon):
         if BaseImporter.stops is None:
-            mongo_client = pymongo.MongoClient()
-            db = mongo_client['reality']
-            collection = db['public_transport_stops']
+            mongo_db = mongo_client['reality']
+            collection = mongo_db['public_transport_stops']
             BaseImporter.stops = pd.DataFrame(collection.find()).drop(columns = '_id')
 
         closest_stop = BaseImporter.stops.join(BaseImporter.stops.point.apply(lambda x: BaseImporter.__get_distance(
@@ -54,11 +62,17 @@ class BaseImporter:
         return eval(closest_stop)
 
     def get_document_from_url(self, url):
-        # print(url)
-        with urllib.request.urlopen(url) as request:
-            content = request.read().decode()
-            doc = lxml.html.fromstring(content)
-            return doc
+        for attempt in range(ATTEMPTS):
+            try:
+                with urllib.request.urlopen(url) as request:
+                    content = request.read().decode()
+                    doc = lxml.html.fromstring(content)
+                    return doc
+            except Exception as ex:
+                self._logger.exception("BaseImporter::get_document_from_url(): An error has occurred")
+                self._logger.exception(ex)
+                sleep(30)
+        raise Exception(f"BaseImporter::get_document_from_url(): Couldn't get document {url}")
 
     @staticmethod
     def get_json_from_url(url):
