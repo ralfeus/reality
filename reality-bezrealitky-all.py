@@ -68,7 +68,7 @@ class BezRealitky(BaseImporter):
                     # items = self.sel_items(response)
                     # print(f"Inserting {len(items)} entries...", end = '')
                     for item in data['adverts']:
-                        markers = filter(lambda m: m['id'] == item['id'], data['markers'])
+                        markers = filter(lambda m: m['id'] == item['id'], data.get('markers') or [])
                         try:
                             gps = next(markers)['gps']
                         except:
