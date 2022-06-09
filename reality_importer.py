@@ -12,8 +12,9 @@ import pymongo
 from time import sleep
 
 ATTEMPTS = 5
+DB_HOST = 'localhost'
 logging.basicConfig(level=logging.INFO)
-mongo_client = pymongo.MongoClient('sandlet', connect=True)
+mongo_client = pymongo.MongoClient(DB_HOST, connect=True)
 mongo_db = mongo_client['reality']
 
 class BaseImporter:
@@ -121,7 +122,7 @@ class BaseImporter:
                 raise Exception("Couldn't connect to MySQL")
             attempts_left -= 1
             BaseImporter.mysql_connection = MySQLdb.connect(
-                host='sandlet', 
+                host=DB_HOST, 
                 user='reality',
                 password='reality',
                 database='reality'
