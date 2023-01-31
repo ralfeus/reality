@@ -95,6 +95,7 @@ class BezRealitky(BaseImporter):
                                     'keyEstateType': property_type,
                                     'keyDisposition': layout,
                                     'gps': gps,
+                                    'address': item['address({"locale":"CS"})'],
                                     **item
                                 }
                             }
