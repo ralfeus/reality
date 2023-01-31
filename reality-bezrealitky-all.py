@@ -20,6 +20,16 @@ class BezRealitky(BaseImporter):
         script = CSSSelector('script#__NEXT_DATA__')(document)[0].text
         data = json.loads(script)
         return data['props']['pageProps']
+    
+    def __get_total_count(self, data):
+        max = 0
+        for k, v in data['apolloCache']['ROOT_QUERY'].items():
+            if 'listAdverts(' in k and v.get('totalCount') > max:
+                max = v.get('totalCount')
+        return max
+    
+    def __get_adverts(self, data):
+        return [v for k, v in data['apolloCache'].items() if 'Advert:' in k]
 
     def fetch(self):
         collection_sell = mongo_db['product']
@@ -61,18 +71,14 @@ class BezRealitky(BaseImporter):
                     # self._logger.info('Got document')
                     data = self.__get_json(response)
                     if page == 1:
-                        total = data['totalCount']
+                        total = self.__get_total_count(data)
                         entries_per_page = data['limit']
                         total_pages = math.ceil(total / entries_per_page)
                     page += 1
                     # items = self.sel_items(response)
                     # print(f"Inserting {len(items)} entries...", end = '')
-                    for item in data['adverts']:
-                        markers = filter(lambda m: m['id'] == item['id'], data.get('markers') or [])
-                        try:
-                            gps = next(markers)['gps']
-                        except:
-                            gps = {'lat': 0, 'lng': 0}
+                    for item in self.__get_adverts(data):
+                        gps = item.get('gps') or {'lat': 0, 'lng': 0}
                         lat = float(gps['lat'])
                         lon = float(gps['lng'])
                         layout_parts = item['disposition'].split('_')
