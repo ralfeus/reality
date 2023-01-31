@@ -89,13 +89,13 @@ class BezRealitky(BaseImporter):
                                 "url": "https://www.bezrealitky.cz/nemovitosti-byty-domy/" + item['uri'],
                                 "id": item['id'],
                                 "timeAdded": datetime.now(),
+                                'address': item['address({"locale":"CS"})'],
                                 'advertEstateOffer': {
                                     'currency': item['currency'],
                                     'keyOfferType': offer,
                                     'keyEstateType': property_type,
                                     'keyDisposition': layout,
                                     'gps': gps,
-                                    'address': item['address({"locale":"CS"})'],
                                     **item
                                 }
                             }
