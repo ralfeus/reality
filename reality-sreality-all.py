@@ -108,7 +108,8 @@ estate_type = {
 offer_type = {
     1: 'prodej',
     2: 'pronajem',
-    3: 'drazba'
+    3: 'drazba',
+    4: 'other'
 }
 request_params = {
         'per_page': 999, # Amount of items per page
