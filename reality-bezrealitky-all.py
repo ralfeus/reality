@@ -89,7 +89,6 @@ class BezRealitky(BaseImporter):
                                 "url": "https://www.bezrealitky.cz/nemovitosti-byty-domy/" + item['uri'],
                                 "id": item['id'],
                                 "timeAdded": datetime.now(),
-                                'address': item['address({"locale":"CS"})'],
                                 'advertEstateOffer': {
                                     'currency': item['currency'],
                                     'keyOfferType': offer,
@@ -101,7 +100,7 @@ class BezRealitky(BaseImporter):
                             }
                             json_doc['closestPublicTransportStop'] = BaseImporter.getClosestStop(lat, lon)
                             raw_collection.insert_one(json_doc)
-                            if 'Praha' in item['address'] and property_type == 'byt':
+                            if 'Praha' in item['address({"locale":"CS"})'] and property_type == 'byt':
                                 self.add_product({
                                     "vendor": "Bez realitky",
                                     "id": item['id'],
